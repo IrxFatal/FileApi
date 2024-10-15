@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"], input[type="password"], input[type="file"], button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    pre {
+      background-color: #eee;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Тестирование API для обмена файлами</h1>
+  <div class="container">
+    <div class="form-group">
+      <h2>Регистрация</h2>
+      <label for="register-username">Имя пользователя</label>
+      <input type="text" id="register-username" placeholder="Имя пользователя">
+      
+      <label for="register-password">Пароль</label>
+      <input type="password" id="register-password" placeholder="Пароль">
+      
+      <button onclick="register()">Зарегистрироваться</button>
+    </div>
+
+    <div class="form-group">
+      <h2>Логин</h2>
+      <label for="login-username">Имя пользователя</label>
+      <input type="text" id="login-username" placeholder="Имя пользователя">
+      
+      <label for="login-password">Пароль</label>
+      <input type="password" id="login-password" placeholder="Пароль">
+      
+      <button onclick="login()">Войти</button>
+    </div>
+
+    <div class="form-group">
+      <h2>Загрузка файла</h2>
+      <label for="upload-file">Выберите файл</label>
+      <input type="file" id="upload-file">
+      
+      <button onclick="uploadFile()">Загрузить файл</button>
+    </div>
+
+    <div class="form-group">
+      <h2>Скачивание файла</h2>
+      <label for="download-filename">Имя файла для скачивания</label>
+      <input type="text" id="download-filename" placeholder="Имя файла">
+      
+      <button onclick="downloadFile()">Скачать файл</button>
+    </div>
+
+    <pre id="response"></pre>
+  </div>
+
+  <script>
+    let token = '';
+
+    function showMessage(message) {
+      document.getElementById('response').textContent = message;
+    }
+
+    async function register() {
+      const username = document.getElementById('register-username').value;
+      const password = document.getElementById('register-password').value;
+
+      try {
+        const response = await fetch('http://localhost:3000/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
+        const result = await response.text();
+        showMessage(result);
+      } catch (error) {
+        showMessage('Ошибка регистрации: ' + error.message);
+      }
+    }
+
+    async function login() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const response = await fetch('http://localhost:3000/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
+        const result = await response.json();
+        token = result.token;
+        showMessage('Токен получен: ' + token);
+      } catch (error) {
+        showMessage('Ошибка входа: ' + error.message);
+      }
+    }
+
+    async function uploadFile() {
+      const fileInput = document.getElementById('upload-file');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        showMessage('Выберите файл для загрузки');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('http://localhost:3000/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+          },
+          body: formData,
+        });
+        const result = await response.json();
+        showMessage('Файл загружен: ' + result.filename);
+      } catch (error) {
+        showMessage('Ошибка загрузки: ' + error.message);
+      }
+    }
+
+    async function downloadFile() {
+      const filename = document.getElementById('download-filename').value;
+
+      try {
+        const response = await fetch('http://localhost:3000/download/' + filename, {
+          method: 'GET',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+          },
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          showMessage('Файл скачан: ' + filename);
+        } else {
+          showMessage('Ошибка скачивания файла');
+        }
+      } catch (error) {
+        showMessage('Ошибка скачивания: ' + error.message);
+      }
+    }
+  </script>
+
+</body>
+</html>
